@@ -4,6 +4,8 @@ import json
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from sklearn.model_selection import train_test_split
+import numpy as np  
+import os
 
 def clear_gpu_memory():
     gc.collect()
@@ -12,19 +14,28 @@ def clear_gpu_memory():
 clear_gpu_memory()
 device = 'cuda'
 
-check_layer = 5
+check_layer=25
 batch_size=8
-#
-tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B")
-model = AutoModelForCausalLM.from_pretrained("deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", device_map=device)
 
-with open("/content/hellaswag_jesus_counterfactuals.json", "r") as f:
+model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+dataset_directory = "filtered_dataset.json"
+
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name, device_map=device)
+
+with open(dataset_directory, "r") as f:
     base_dataset = json.load(f)
 
 baseline_cache = []
 jesus_cache = []
 
 train, test = train_test_split(base_dataset, test_size=0.2, random_state=42)
+
+# Save train-test split as JSON
+split_json_file = "train_test_split.json"
+with open(split_json_file, "w") as f:
+    json.dump({"train": train, "test": test}, f)
+print(f"Train-test split saved as JSON to {split_json_file}")
 
 """# Utilities"""
 
@@ -56,7 +67,7 @@ for i in tqdm(range(0, len(train), 32)):
         clear_gpu_memory()
 
         # PI: baseline cache
-        baseline_data = [item['original']['prompt'] for item in train[i:i+batch_size]]
+        baseline_data = [item['original_prompt'] for item in train[i:i+batch_size]]
 
         get_cache_and_logits, remove_hooks = create_hook_extract_cache(model, layer=check_layer)
         inputs = tokenizer(baseline_data, return_tensors="pt", padding=True,truncation=True)
@@ -75,7 +86,7 @@ for i in tqdm(range(0, len(train), 32)):
 
         # PII: Get Jesus/counterfactual cache
 
-        counterfactual_data = [item['counterfactual']['prompt'] for item in train[i:i+batch_size]]
+        counterfactual_data = [item['counterfactual_prompt'] for item in train[i:i+batch_size]]
 
         get_cache_and_logits, remove_hooks = create_hook_extract_cache(model, layer=check_layer)
         inputs = tokenizer(counterfactual_data, return_tensors="pt", padding=True,truncation=True)
@@ -113,6 +124,8 @@ print(f"Shape of mean activation: {baseline_mean_act.shape}")
 jesus_dir = jesus_mean_act-baseline_mean_act
 jesus_dir = jesus_dir / jesus_dir.norm()
 
+torch.save(jesus_dir, "jesus_vector.pt")
+
 def remove_all_hooks(model):
     for module in model.modules():
         if hasattr(module, '_forward_hooks'):
@@ -123,6 +136,8 @@ def remove_all_hooks(model):
             module._forward_pre_hooks.clear()
     print("All hooks removed")
 
+"""#### Ablation"""
+
 # Clear any existing hooks
 remove_all_hooks(model)
 
@@ -130,6 +145,7 @@ remove_all_hooks(model)
 import gc
 torch.cuda.empty_cache()
 gc.collect()
+
 
 def create_ablation_hook(direction, scale=1.0):
     def ablate_direction(module, input, output):
@@ -150,13 +166,14 @@ def create_ablation_hook(direction, scale=1.0):
             # Return modified tuple
             return (modified_hidden,) + output[1:]
         else:
+            print("Output is not a tuple")
             # If not a tuple, return unchanged
             return output
 
     return ablate_direction
 
 # Run inference without hooks first to get baseline output
-test_batch_input = [item['counterfactual']['prompt'] for item in test[4:5]]
+test_batch_input = [item['counterfactual_prompt'] for item in test]
 
 baseline_inputs = tokenizer(test_batch_input, return_tensors="pt",padding=True,truncation=True)
 baseline_inputs = {k: v.to(device) for k, v in baseline_inputs.items()}
@@ -174,8 +191,9 @@ with torch.no_grad():
 # Decode the output tokens to text
 baseline_texts = tokenizer.batch_decode(baseline_outputs, skip_special_tokens=True)
 print("Baseline text outputs DONE")
+Baseline_outputs = []
 for text in baseline_texts:
-    print(text)
+    Baseline_outputs.append(text)
 
 # Now run with ablation hooks to get modified output
 remove_all_hooks(model)  # Remove any existing hooks
@@ -186,58 +204,35 @@ for layer_idx in range(len(model.model.layers)):
     hook = model.model.layers[layer_idx].register_forward_hook(ablation_hook)
     hooks.append(hook)
 
-try:
-    with torch.no_grad():
-        ablated_outputs = model.generate(
-            baseline_inputs["input_ids"],
-            attention_mask=baseline_inputs["attention_mask"],
-            max_new_tokens=500,
-            do_sample=False
-        )
 
-    # Decode the output tokens
-    ablated_text = tokenizer.batch_decode(ablated_outputs, skip_special_tokens=True)
-    print("\nAblated text outputs DONE")
-    for text in ablated_text:
-      print(text)
+with torch.no_grad():
+    ablated_outputs = model.generate(
+        baseline_inputs["input_ids"],
+        attention_mask=baseline_inputs["attention_mask"],
+        max_new_tokens=500,
+        do_sample=False
+    )
 
-finally:
-    # Always remove hooks
-    for hook in hooks:
-        hook.remove()
+# Decode the output tokens
+ablated_text = tokenizer.batch_decode(ablated_outputs, skip_special_tokens=True)
+Ablated_outputs = []
+print("\nAblated text outputs DONE")
+for text in ablated_text:
+    Ablated_outputs.append(text)
 
-test_text = [item['counterfactual']['prompt'] for item in test[2:3]]
-baseline_inputs = tokenizer(test_text, return_tensors="pt",padding=True,truncation=True)
-baseline_inputs = {k: v.to(device) for k, v in baseline_inputs.items()}
+for hook in hooks:
+    hook.remove()
 
-model.eval()
-# Now run with ablation hooks to get modified output
-remove_all_hooks(model)  # Remove any existing hooks
-hooks = []
+structured_outputs = []
 
-ablation_hook = create_ablation_hook(jesus_dir,scale=1.0)
-for layer_idx in range(len(model.model.layers)):
-    hook = model.model.layers[layer_idx].register_forward_hook(ablation_hook)
-    hooks.append(hook)
+for i in range(len(test)):  # Assuming test, Baseline_outputs, and Ablated_outputs all have the same length
+    item = {
+        "prompt": test[i]["counterfactual_prompt"],
+        "baseline_output": Baseline_outputs[i],
+        "ablated_output": Ablated_outputs[i]
+    }
+    structured_outputs.append(item)
 
-try:
-    with torch.no_grad():
-        ablated_outputs = model.generate(
-            baseline_inputs["input_ids"],
-            attention_mask=baseline_inputs["attention_mask"],
-            max_new_tokens=1000,
-            do_sample=False
-        )
-
-    # Decode the output tokens
-    ablated_text = tokenizer.batch_decode(ablated_outputs, skip_special_tokens=True)
-    print("\nAblated text outputs DONE")
-    for text in ablated_text:
-      print(text)
-
-finally:
-    # Always remove hooks
-    for hook in hooks:
-        hook.remove()
-
-clear_gpu_memory()
+# Save the structured data to a JSON file
+with open("outputs.json", "w") as f:
+    json.dump(structured_outputs, f, indent=2)  # indent=2 makes the JSON file more readable
