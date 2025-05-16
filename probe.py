@@ -14,7 +14,7 @@ device = 'cuda'
 
 check_layer = 5
 batch_size=8
-
+#
 tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B")
 model = AutoModelForCausalLM.from_pretrained("deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B", device_map=device)
 
