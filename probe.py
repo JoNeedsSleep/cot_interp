@@ -278,7 +278,7 @@ Ablated_outputs_2 = run_with_hooks(ablation_hook_2,baseline_inputs_ablation)
 ablation_hook_random = create_ablation_hook(random_dir,scale=1.0)
 Ablated_outputs_random = run_with_hooks(ablation_hook_random,baseline_inputs_ablation)
 
-ablation_hook_quarter_positive = create_ablation_hook(jesus_dir,scale=0.25)
+ablation_hook_quarter_positive = create_positive_hook(jesus_dir,scale=0.25)
 Ablated_outputs_quarter_positive = run_with_hooks(ablation_hook_quarter_positive,baseline_inputs_positive)
 ablation_hook_half_positive = create_positive_hook(jesus_dir,scale=0.5)
 Ablated_outputs_half_positive = run_with_hooks(ablation_hook_half_positive,baseline_inputs_positive)
