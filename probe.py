@@ -280,6 +280,7 @@ Ablated_outputs_random = run_with_hooks(ablation_hook_random,baseline_inputs_abl
 
 ablation_hook_quarter_positive = create_positive_hook(jesus_dir,scale=0.25)
 Ablated_outputs_quarter_positive = run_with_hooks(ablation_hook_quarter_positive,baseline_inputs_positive)
+"""
 ablation_hook_half_positive = create_positive_hook(jesus_dir,scale=0.5)
 Ablated_outputs_half_positive = run_with_hooks(ablation_hook_half_positive,baseline_inputs_positive)
 ablation_hook_positive = create_positive_hook(jesus_dir,scale=1.0)
@@ -288,7 +289,7 @@ ablation_hook_2_positive = create_positive_hook(jesus_dir,scale=2.0)
 Ablated_outputs_2_positive = run_with_hooks(ablation_hook_2_positive,baseline_inputs_positive)
 ablation_hook_random_positive = create_positive_hook(random_dir,scale=1.0)
 Ablated_outputs_random_positive = run_with_hooks(ablation_hook_random_positive,baseline_inputs_positive)
-
+"""
 structured_outputs = []
 
 for i in range(len(test)):  # Assuming test, Baseline_outputs, and Ablated_outputs all have the same length
@@ -306,14 +307,17 @@ for i in range(len(test)):  # Assuming test, Baseline_outputs, and Ablated_outpu
         "positive": {
             "prompt": test[i]["original_prompt"],
             "positive_0": baseline_outputs_positive[i],
-            "positive_half": Ablated_outputs_half_positive[i],
-            "positive_1": Ablated_outputs_positive[i],
-            "positive_2": Ablated_outputs_2_positive[i],
-            "positive_random": Ablated_outputs_random_positive[i]
+            "positive_quarter": Ablated_outputs_quarter_positive[i],
         }
     }
     structured_outputs.append(item)
 
+"""
+            "positive_half": Ablated_outputs_half_positive[i],
+            "positive_1": Ablated_outputs_positive[i],
+            "positive_2": Ablated_outputs_2_positive[i],
+            "positive_random": Ablated_outputs_random_positive[i]
+            """
 # Save the structured data to a JSON file
 with open("outputs2.json", "w") as f:
     json.dump(structured_outputs, f, indent=2)  # indent=2 makes the JSON file more readable
