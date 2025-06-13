@@ -1,7 +1,10 @@
 import json
 import re
 
-with open('outputs2.json', 'r') as f:
+ablation_path = '/net/scratch2/cot_interp/ablation_mention_and_flip_rates3.png'
+positive_path = '/net/scratch2/cot_interp/positive_mention_and_flip_rates3.png'
+
+with open('outputs3.json', 'r') as f:
     data = json.load(f)
 
 print(len(data))
@@ -23,14 +26,15 @@ data = [
         "positive": {
             "prompt": "...",
             "positive_0": "...",
-            "positive_half": "...",
-            "positive_1": "...",
-            "positive_2": "...",
+            "positive_point_10": "...",
+            "positive_point_15": "...",
+            "positive_point_20": "...",
             "positive_random": "..."
         }
     }
 ]
 """
+# ablation
 ablation = [item['ablation'] for item in data]
 ablation_baseline = [item['ablation_0'] for item in ablation]
 ablation_quarter = [item['ablation_quarter'] for item in ablation]
@@ -40,14 +44,16 @@ ablation_1 = [item['ablation_1'] for item in ablation]
 ablation_2 = [item['ablation_2'] for item in ablation]
 ablation_random = [item['ablation_random'] for item in ablation]
 
-"""
+# positive direction
 positive = [item['positive'] for item in data]
 positive_baseline = [item['positive_0'] for item in positive]
-positive_half = [item['positive_half'] for item in positive]
-positive_1 = [item['positive_1'] for item in positive]
-positive_2 = [item['positive_2'] for item in positive]
+positive_point_10 = [item['positive_point_10'] for item in positive]
+positive_point_15 = [item['positive_point_15'] for item in positive]
+positive_point_20 = [item['positive_point_20'] for item in positive]
 positive_random = [item['positive_random'] for item in positive]
-"""
+
+
+
 def delete_prompt(answer_text):
     return answer_text.split("\n Now think step by step: output your final answer as a seperate line. The options are [\n A, \n B, \n C, \n D].")[1]
 
@@ -114,6 +120,36 @@ one_flipped_pct = sum(1 for a,b in zip(original_answers, one_answers) if a != b)
 two_flipped_pct = sum(1 for a,b in zip(original_answers, two_answers) if a != b)/len(original_answers)*100
 random_flipped_pct = sum(1 for a,b in zip(original_answers, random_answers) if a != b)/len(original_answers)*100
 
+# percentage of jesus mentioned (without the prompt it wouldn't make sense for jesus to be mentioned, but just in case)
+pattern = r"jesus"
+def mentioning_jesus(answer_texts):
+    results = []
+    for text in answer_texts:
+        if re.search(pattern, text, re.IGNORECASE):
+            results.append(True)
+        else:
+            results.append(False)
+    return results
+
+positive_baseline_pct = mentioning_jesus(positive_baseline).count(True)/len(positive_baseline)*100
+positive_point_10_pct = mentioning_jesus(positive_point_10).count(True)/len(positive_point_10)*100
+positive_point_15_pct = mentioning_jesus(positive_point_15).count(True)/len(positive_point_15)*100
+positive_point_20_pct = mentioning_jesus(positive_point_20).count(True)/len(positive_point_20)*100
+positive_random_pct = mentioning_jesus(positive_random).count(True)/len(positive_random)*100
+
+# percentage of flipped answers wrt to baseline
+original_answers = extract_answer(positive_baseline)
+point_10_answers = extract_answer(positive_point_10)
+point_15_answers = extract_answer(positive_point_15)
+point_20_answers = extract_answer(positive_point_20)
+positive_random_answers = extract_answer(positive_random)
+
+point_10_flipped_pct = sum(1 for a,b in zip(original_answers, point_10_answers) if a != b)/len(original_answers)*100
+point_15_flipped_pct = sum(1 for a,b in zip(original_answers, point_15_answers) if a != b)/len(original_answers)*100
+point_20_flipped_pct = sum(1 for a,b in zip(original_answers, point_20_answers) if a != b)/len(original_answers)*100
+positive_random_flipped_pct = sum(1 for a,b in zip(original_answers, positive_random_answers) if a != b)/len(original_answers)*100
+
+
 # Create DataFrame
 df = pd.DataFrame({
     'ablation_scale': [-1,0.0, 0.25, 0.5, 0.75, 1.0, 2.0],
@@ -172,5 +208,69 @@ plt.ylim(0, max(max(df['percentage_output']), max(df['percentage_flipped'])) * 1
 plt.tight_layout()
 
 # Save with higher DPI for better quality
-plt.savefig('ablation_mention_and_flip_rates.png', dpi=300, bbox_inches='tight')
+
+print(f"Saving ablation plot to: {ablation_path}")
+plt.savefig(ablation_path, dpi=300, bbox_inches='tight')
+plt.show()
+
+# Create DataFrame for positive condition
+df_positive = pd.DataFrame({
+    'prompt_scale': [-0.1, 0.0, 0.10, 0.15, 0.20],
+    'percentage_output': [positive_random_pct, positive_baseline_pct, positive_point_10_pct, positive_point_15_pct, positive_point_20_pct],
+    'percentage_flipped': [positive_random_flipped_pct, 0, point_10_flipped_pct, point_15_flipped_pct, point_20_flipped_pct]
+})
+
+print("\nPositive Condition Data:")
+print(df_positive)
+
+# Create a new figure for positive condition
+plt.figure(figsize=(10, 6))
+
+# Create the first line plot (mention rate)
+plt.plot(df_positive['prompt_scale'], df_positive['percentage_output'], 
+         marker='o', markersize=8, linewidth=3, color='steelblue', 
+         markerfacecolor='darkblue', markeredgecolor='white', markeredgewidth=2,
+         label='Mention Rate')
+
+# Create the second line plot (flipped rate)
+plt.plot(df_positive['prompt_scale'], df_positive['percentage_flipped'],
+         marker='s', markersize=8, linewidth=3, color='crimson',
+         markerfacecolor='darkred', markeredgecolor='white', markeredgewidth=2,
+         label='Answer Change Rate')
+
+# Add value labels next to each point
+for i, (x, y) in enumerate(zip(df_positive['prompt_scale'], df_positive['percentage_output'])):
+    plt.annotate(f'{y:.1f}%', (x, y), textcoords="offset points", 
+                xytext=(0,10), ha='center', fontweight='bold', fontsize=10)
+
+for i, (x, y) in enumerate(zip(df_positive['prompt_scale'], df_positive['percentage_flipped'])):
+    # Use a larger negative offset for the baseline point (x=0.0)
+    y_offset = -25 if x == 0.0 else -15
+    plt.annotate(f'{y:.1f}%', (x, y), textcoords="offset points", 
+                xytext=(0,y_offset), ha='center', fontweight='bold', fontsize=10)
+
+# Customize the plot
+plt.title('Effect of Positive Jesus Direction on Bias Mention and Answer Change Rates', 
+          fontsize=16, fontweight='bold', pad=20)
+plt.xlabel('Prompt Scale', fontsize=12, fontweight='bold')
+plt.ylabel('Percentage (%)', fontsize=12, fontweight='bold')
+
+# Set x-tick labels
+x_labels = ['Random\n(Control)', 'Baseline\n(0.0)', 'Point 10\n(0.10)', 'Point 15\n(0.15)', 'Point 20\n(0.20)']
+plt.xticks(df_positive['prompt_scale'], x_labels, fontsize=10)
+
+# Add grid for better readability
+plt.grid(True, alpha=0.3, axis='both')
+
+# Add legend
+plt.legend(fontsize=10, loc='upper left')
+
+# Set y-axis limits with some padding
+plt.ylim(0, max(max(df_positive['percentage_output']), max(df_positive['percentage_flipped'])) * 1.1)
+
+# Improve layout
+plt.tight_layout()
+
+print(f"Saving positive plot to: {positive_path}")
+plt.savefig(positive_path, dpi=300, bbox_inches='tight')
 plt.show()

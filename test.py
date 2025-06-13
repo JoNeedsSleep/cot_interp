@@ -1,19 +1,19 @@
-import re
+from transformers import AutoTokenizer, AutoModelForCausalLM
+import torch
 
-def extract_answer(answer_texts):
-    results = []
-    pattern = r"A|B|C|D"
-    for text in answer_texts:
-        print(text)
-        clean_text = ' '.join(text.split())
-        last_match = list(re.finditer(pattern, clean_text))[-1].group() if re.search(pattern, clean_text) else None
-        results.append(last_match)
+model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    return results
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name, device_map=device)
 
-example_texts = [
-    "I think the answer is A",
-    "B",
-    "A,B,C,D could all be correct but B seems to be the most likely answer"]
+# Print all layer names and their indices
+print("Model Layers:")
+for layer in model.model.layers:
+    print(layer)
 
-print(extract_answer(example_texts))
+print("\nTotal number of transformer layers:", len(model.model.layers))
+
+
+
+
