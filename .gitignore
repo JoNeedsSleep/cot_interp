@@ -49,3 +49,11 @@ logs/
 # Temporary files
 tmp/
 temp/ 
+
+# Test files
+test.py
+
+.cache/
+.err
+.out
+.log

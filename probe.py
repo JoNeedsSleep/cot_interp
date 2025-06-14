@@ -8,35 +8,37 @@ import numpy as np
 import os
 import gc
 
+model_name="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name, device_map=device)
+
+
 def run_probe_pipeline(check_layer=25, 
-              batch_size=8, 
-              model_name="deepseek-ai/DeepSeek-R1-Distill-Qwen-7B", 
+              batch_size=8,
               dataset_directory="filtered_dataset.json", 
               output_path="outputs3.json",
+              save_jesus_vector_path="jesus_vector.pt",
               same_dataset=True):
     def clear_gpu_memory():
         gc.collect()
         torch.cuda.empty_cache()
 
     clear_gpu_memory()
-    device = 'cuda'
-
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, device_map=device)
-
     with open(dataset_directory, "r") as f:
         base_dataset = json.load(f)
 
     baseline_cache = []
     jesus_cache = []
 
-    if os.path.exists("train_test_split.json") and same_dataset == True:
-        with open("train_test_split.json", "r") as f:
-            train, test = json.load(f)
+    if os.path.exists("/net/scratch2/cot_interp/train_test_split.json") and same_dataset == True:
+        with open("/net/scratch2/cot_interp/train_test_split.json", "r") as f:
+            data = json.load(f)
+            train, test = data["train"], data["test"]
         print(f"Train-test split loaded from train_test_split.json")
     else:
         train, test = train_test_split(base_dataset, test_size=0.3, random_state=42)
-        with open("train_test_split.json", "w") as f:
+        with open("/net/scratch2/cot_interp/train_test_split.json", "w") as f:
             json.dump({"train": train, "test": test}, f)
         print(f"Train-test split saved as JSON to train_test_split.json")
 
@@ -67,7 +69,7 @@ def run_probe_pipeline(check_layer=25,
     #                                  Run with cache                              #
     ################################################################################
 
-    for i in tqdm(range(0, len(train), 32)):
+    for i in tqdm(range(0, len(train), batch_size)):
         try:
             clear_gpu_memory()
 
@@ -109,12 +111,6 @@ def run_probe_pipeline(check_layer=25,
             print(f"error processing example: {e}")
             continue
 
-    if baseline_cache:
-        print(f"Type of first cache element: {type(baseline_cache[0])}")
-        print(f"Structure of first cache: {type(baseline_cache[0][0])}")
-        if hasattr(baseline_cache[0][0], 'shape'):
-            print(f"Shape of first cache: {baseline_cache[0][0].shape}")
-
     ################################################################################
     #                                  Finding Jesus direction                     #
     ################################################################################
@@ -131,7 +127,7 @@ def run_probe_pipeline(check_layer=25,
     jesus_dir = jesus_mean_act-baseline_mean_act
     jesus_dir = jesus_dir / jesus_dir.norm()
 
-    torch.save(jesus_dir, "jesus_vector.pt")
+    torch.save(jesus_dir, save_jesus_vector_path)
 
     # generate random direction
     random_dir = torch.randn_like(baseline_mean_act)
@@ -324,4 +320,8 @@ def run_probe_pipeline(check_layer=25,
     with open(output_path, "w") as f:
         json.dump(structured_outputs, f, indent=2)  # indent=2 makes the JSON file more readable
 
-run_probe_pipeline()
+for i in range(28):
+    print(f"Running probe pipeline for layer {i}")
+    run_probe_pipeline(check_layer=i, 
+                       output_path=f"/net/scratch2/cot_interp/7b_n36_all_layers/output_from_layer_{i}.json",
+                       save_jesus_vector_path=f"/net/scratch2/cot_interp/7b_n36_all_layers/vector_from_layer_{i}.pt")
