@@ -276,16 +276,18 @@ def run_probe_pipeline(check_layer=25,
     ablation_hook_random = create_ablation_hook(random_dir,scale=1.0)
     Ablated_outputs_random = run_with_hooks(ablation_hook_random,baseline_inputs_ablation)
 
-    ablation_hook_point_10 = create_positive_hook(jesus_dir,scale=0.1)
-    Ablated_outputs_point_10 = run_with_hooks(ablation_hook_point_10,baseline_inputs_positive)
-    ablation_hook_point_15 = create_positive_hook(jesus_dir,scale=0.15)
-    Ablated_outputs_point_15 = run_with_hooks(ablation_hook_point_15,baseline_inputs_positive)
-    ablation_hook_point_20 = create_positive_hook(jesus_dir,scale=0.2)
-    Ablated_outputs_point_20 = run_with_hooks(ablation_hook_point_20,baseline_inputs_positive)
-    ablation_hook_point_25 = create_positive_hook(jesus_dir,scale=0.25)
-    Ablated_outputs_point_25 = run_with_hooks(ablation_hook_point_25,baseline_inputs_positive)
-    ablation_hook_random_positive = create_positive_hook(random_dir,scale=0.1)
-    Ablated_outputs_random_positive = run_with_hooks(ablation_hook_random_positive,baseline_inputs_positive)
+    positive_hook_point_10 = create_positive_hook(jesus_dir,scale=0.1)
+    positive_outputs_point_10 = run_with_hooks(positive_hook_point_10,baseline_inputs_positive)
+    positive_hook_point_15 = create_positive_hook(jesus_dir,scale=0.15)
+    positive_outputs_point_15 = run_with_hooks(positive_hook_point_15,baseline_inputs_positive)
+    positive_hook_point_20 = create_positive_hook(jesus_dir,scale=0.2)
+    positive_outputs_point_20 = run_with_hooks(positive_hook_point_20,baseline_inputs_positive)
+    positive_hook_point_25 = create_positive_hook(jesus_dir,scale=0.25)
+    positive_outputs_point_25 = run_with_hooks(positive_hook_point_25,baseline_inputs_positive)
+    positive_hook_random = create_positive_hook(random_dir,scale=0.1)
+    positive_outputs_random = run_with_hooks(positive_hook_random,baseline_inputs_positive)
+    positive_ouputs_random_point_20 = create_positive_hook(random_dir,scale=0.2)
+    positive_outputs_random_point_20 = run_with_hooks(positive_ouputs_random_point_20,baseline_inputs_positive)
 
     structured_outputs = []
 
@@ -304,11 +306,12 @@ def run_probe_pipeline(check_layer=25,
             "positive": {
                 "prompt": test[i]["original_prompt"],
                 "positive_0": baseline_outputs_positive[i],
-                "positive_point_10": Ablated_outputs_point_10[i],
-                "positive_point_15": Ablated_outputs_point_15[i],
-                "positive_point_20": Ablated_outputs_point_20[i],
-                "positive_point_25": Ablated_outputs_point_25[i],
-                "positive_random": Ablated_outputs_random_positive[i]
+                "positive_point_10": positive_outputs_point_10[i],
+                "positive_point_15": positive_outputs_point_15[i],
+                "positive_point_20": positive_outputs_point_20[i],
+                "positive_point_25": positive_outputs_point_25[i],
+                "positive_random": positive_outputs_random[i],
+                "positive_random_point_20": positive_outputs_random_point_20[i]
             }
         }
         structured_outputs.append(item)

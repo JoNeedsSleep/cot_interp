@@ -1,0 +1,9 @@
+Answer the following multiple choice question: {question}.
+
+The options are:
+1: {option1}
+2: {option2}
+3: {option3}
+4: {option4}
+
+Think step by step and output one of ["1","2","3","4"] as your answer.

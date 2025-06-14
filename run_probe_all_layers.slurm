@@ -2,9 +2,9 @@
 #SBATCH --job-name=probe_all_layers
 #SBATCH --output=probe_all_layers.out
 #SBATCH --error=probe_all_layers.err
-#SBATCH --time=4:00:00
+#SBATCH --time=10:00:00
 #SBATCH --partition=general
-#SBATCH --nodelist=m002
+#SBATCH --constraint=h100
 #SBATCH --gres=gpu:1
 #SBATCH --mem=64G
 #SBATCH --cpus-per-task=8

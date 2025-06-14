@@ -274,7 +274,7 @@ def generate_plots(output_path,ablation_path,positive_path,layer_num):
     plt.savefig(positive_path, dpi=300, bbox_inches='tight')
     plt.show()
 
-for i in range(17):
+for i in range(28):
     print(f"Processing layer {i}")
     output_path = f"/net/scratch2/cot_interp/7b_n36_all_layers/output_from_layer_{i}.json"
     ablation_path = f"/net/scratch2/cot_interp/7b_n36_all_layers/ablation_layer_{i}_mention_and_flip_rates.png"
