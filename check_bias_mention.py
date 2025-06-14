@@ -1,7 +1,7 @@
 import json
 import re
 
-def generate_plots(output_path,ablation_path,positive_path):
+def generate_plots(output_path,ablation_path,positive_path,layer_num):
 
     with open(output_path, 'r') as f:
         data = json.load(f)
@@ -185,7 +185,7 @@ def generate_plots(output_path,ablation_path,positive_path):
                     xytext=(0,y_offset), ha='center', fontweight='bold', fontsize=10)
 
     # Customize the plot
-    plt.title('Effect of Jesus Direction Ablation on Bias Mention and Answer Change Rates', 
+    plt.title(f'Effect of Jesus Direction Ablation on Bias Mention and Answer Change Rates: Layer {layer_num}', 
             fontsize=16, fontweight='bold', pad=20)
     plt.xlabel('Ablation Scale', fontsize=12, fontweight='bold')
     plt.ylabel('Percentage (%)', fontsize=12, fontweight='bold')
@@ -201,7 +201,7 @@ def generate_plots(output_path,ablation_path,positive_path):
     plt.legend(fontsize=10, loc='upper left')
 
     # Set y-axis limits with some padding
-    plt.ylim(0, max(max(df['percentage_output']), max(df['percentage_flipped'])) * 1.1)
+    plt.ylim(0, 80)
 
     # Improve layout
     plt.tight_layout()
@@ -249,7 +249,7 @@ def generate_plots(output_path,ablation_path,positive_path):
                     xytext=(0,y_offset), ha='center', fontweight='bold', fontsize=10)
 
     # Customize the plot
-    plt.title('Effect of Positive Jesus Direction on Bias Mention and Answer Change Rates', 
+    plt.title(f'Effect of Positive Jesus Direction on Bias Mention and Answer Change Rates: Layer {layer_num}', 
             fontsize=16, fontweight='bold', pad=20)
     plt.xlabel('Prompt Scale', fontsize=12, fontweight='bold')
     plt.ylabel('Percentage (%)', fontsize=12, fontweight='bold')
@@ -265,7 +265,7 @@ def generate_plots(output_path,ablation_path,positive_path):
     plt.legend(fontsize=10, loc='upper left')
 
     # Set y-axis limits with some padding
-    plt.ylim(0, max(max(df_positive['percentage_output']), max(df_positive['percentage_flipped'])) * 1.1)
+    plt.ylim(0, 80)
 
     # Improve layout
     plt.tight_layout()
@@ -274,9 +274,9 @@ def generate_plots(output_path,ablation_path,positive_path):
     plt.savefig(positive_path, dpi=300, bbox_inches='tight')
     plt.show()
 
-for i in range(16):
+for i in range(17):
     print(f"Processing layer {i}")
     output_path = f"/net/scratch2/cot_interp/7b_n36_all_layers/output_from_layer_{i}.json"
     ablation_path = f"/net/scratch2/cot_interp/7b_n36_all_layers/ablation_layer_{i}_mention_and_flip_rates.png"
     positive_path = f"/net/scratch2/cot_interp/7b_n36_all_layers/positive_layer_{i}_mention_and_flip_rates.png"
-    generate_plots(output_path,ablation_path,positive_path)
+    generate_plots(output_path,ablation_path,positive_path,i)
